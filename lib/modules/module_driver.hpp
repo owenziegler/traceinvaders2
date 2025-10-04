@@ -1,5 +1,5 @@
 /*
-module_driver.h
+module_driver.hpp
 
 Joel Osho & Owen Ziegler
 3/19/2025
@@ -15,8 +15,8 @@ Header file for motor driver code, contains declaration of all motor driver func
 */
 void driverSetup();
 void setSpeed(float left, float right);
-void setMotorA(int speed);
-void setMotorB(int speed);
+void setMotorL(int speed);
+void setMotorR(int speed);
 
 void drive(int left, int right);
 

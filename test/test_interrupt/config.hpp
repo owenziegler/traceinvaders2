@@ -45,4 +45,10 @@ constexpr std::uint8_t _DRIVER_PIN_RIN2 = 39;
 constexpr std::uint8_t _DRIVER_PIN_PWMR = 33;
 constexpr std::uint8_t _DRIVER_PIN_STBY = 14;
 
+// Encoders
+constexpr std::uint8_t _ENCODER_PIN_L_A = 5;
+constexpr std::uint8_t _ENCODER_PIN_L_B = 19;
+constexpr std::uint8_t _ENCODER_PIN_R_A = 18;
+constexpr std::uint8_t _ENCODER_PIN_R_B = 3;
+
 #endif

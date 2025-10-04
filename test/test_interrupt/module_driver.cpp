@@ -14,12 +14,12 @@ Motor driver functions for Line Follower robot. Contains definitions of all moto
 
 
 void driverSetup() {
-  pinMode(_DRIVER_PIN_AIN1, OUTPUT);
-  pinMode(_DRIVER_PIN_AIN2, OUTPUT);
-  pinMode(_DRIVER_PIN_PWMA, OUTPUT);
-  pinMode(_DRIVER_PIN_BIN1, OUTPUT);
-  pinMode(_DRIVER_PIN_BIN2, OUTPUT);
-  pinMode(_DRIVER_PIN_PWMB, OUTPUT);
+  pinMode(_DRIVER_PIN_LIN1, OUTPUT);
+  pinMode(_DRIVER_PIN_LIN2, OUTPUT);
+  pinMode(_DRIVER_PIN_PWML, OUTPUT);
+  pinMode(_DRIVER_PIN_RIN1, OUTPUT);
+  pinMode(_DRIVER_PIN_RIN2, OUTPUT);
+  pinMode(_DRIVER_PIN_PWMR, OUTPUT);
   pinMode(_DRIVER_PIN_STBY, OUTPUT);
   digitalWrite(_DRIVER_PIN_STBY, HIGH);
 }
@@ -28,42 +28,42 @@ void driverSetup() {
 void setSpeed(float left, float right) {
   left = constrain(left,-1,1);
   right = constrain(right,-1,1);
-  setMotorA((int)(left * _DRIVER_BASE_SPEED));
-  setMotorB((int)(right * _DRIVER_BASE_SPEED));
+  setMotorL((int)(left * _DRIVER_BASE_SPEED));
+  setMotorR((int)(right * _DRIVER_BASE_SPEED));
 }
 
-void setMotorA(int speed) {
+void setMotorL(int speed) {
   if (speed >= 0) {
-    digitalWrite(_DRIVER_PIN_AIN1, HIGH);
-    digitalWrite(_DRIVER_PIN_AIN2, LOW);
+    digitalWrite(_DRIVER_PIN_LIN1, HIGH);
+    digitalWrite(_DRIVER_PIN_LIN2, LOW);
   } else {
-    digitalWrite(_DRIVER_PIN_AIN1, LOW);
-    digitalWrite(_DRIVER_PIN_AIN2, HIGH);
+    digitalWrite(_DRIVER_PIN_LIN1, LOW);
+    digitalWrite(_DRIVER_PIN_LIN2, HIGH);
     speed = -speed;
   }
-  analogWrite(_DRIVER_PIN_PWMA, constrain(speed, 0, 255));
+  analogWrite(_DRIVER_PIN_PWML, constrain(speed, 0, 255));
 }
 
-void setMotorB(int speed) {
+void setMotorR(int speed) {
   if (speed >= 0) {
-    digitalWrite(_DRIVER_PIN_BIN1, HIGH);
-    digitalWrite(_DRIVER_PIN_BIN2, LOW);
+    digitalWrite(_DRIVER_PIN_RIN1, HIGH);
+    digitalWrite(_DRIVER_PIN_RIN2, LOW);
   } else {
-    digitalWrite(_DRIVER_PIN_BIN1, LOW);
-    digitalWrite(_DRIVER_PIN_BIN2, HIGH);
+    digitalWrite(_DRIVER_PIN_RIN1, LOW);
+    digitalWrite(_DRIVER_PIN_RIN2, HIGH);
     speed = -speed;
   }
-  analogWrite(_DRIVER_PIN_PWMB, constrain(speed, 0, 255));
+  analogWrite(_DRIVER_PIN_PWMR, constrain(speed, 0, 255));
 }
 
 void nudgeLeft(int baseSpeed, int nudgeAmount) {
-  setMotorA(baseSpeed - nudgeAmount);  // Left motor slower
-  setMotorB(baseSpeed);   // Right motor normal
+  setMotorL(baseSpeed - nudgeAmount);  // Left motor slower
+  setMotorR(baseSpeed);   // Right motor normal
 }
 
 void nudgeRight(int baseSpeed, int nudgeAmount) {
-  setMotorA(baseSpeed);                // Left motor normal
-  setMotorB(baseSpeed - nudgeAmount);   // Right motor slower
+  setMotorL(baseSpeed);                // Left motor normal
+  setMotorR(baseSpeed - nudgeAmount);   // Right motor slower
   }
 /*
 void loop() {
