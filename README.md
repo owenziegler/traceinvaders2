@@ -2,33 +2,14 @@
 
 ## Important usage notes:
 
-### Dependencies:
-- Dependencies for sketches are all placed in the `/lib/` folder. This is crucial, as Arduino IDE uses this folder to discover libraries for inclusion in sketches. **Dependencies for subsystem modules are handled different, so their include statements will be different (detailed in the sections below).**
-- External libraries (driver code from vendors, basically anything not written by us) is to be placed in `/lib/external/`
-- Subsystem libraries (code we create for our various subsystems) is to be placed in `/lib/modules/`.
-- **Note: Every sketch and subsystem library must include `config.hpp`, otherwise critical pin assignments and settings flags will not be included!** 
+### Setup:
+- Clone this repository to a folder named `traceinvaders2` somewhere on your computer.
+- In Arduino IDE, go to the top toolbar and select File > Preference or press Ctrl+, to open Settings. The first setting in the list will be your sketchbook location. Change this from the default so it points to the `traceinvaders2` folder you just created.
+- When you select the Sketchbook in the side bar (the first icon, depicting a folder), it should now show the main sketch, as well as the the test sketches in the test folder.
 
-### To include a library in a SKETCH:
-- Once your subsystem or external library is correctly placed in `/lib`, include the header file using the syntax:
-```
-//including config.hpp:
-#include <config/config.hpp>
-//including an external library: 
-#include <external/library_name.hpp>
-//including a subsystem library:
-#include <modules/module_name.hpp>
-```
-
-### To include a library in ANOTHER LIBRARY:
-- Arduino IDE won't automatically resolve dependencies for these, so we need to use relative paths. There are three types of includes that you might need to use in a subsystem module: the config file, another subsystem, or an external library. Examples of each are listed below.
-```
-//including config.hpp:
-#include "../config/config.hpp"
-//including an external library: 
-#include "../external/library_name.hpp"
-//including a subsystem library:
-#include "module_name.hpp"
-```
+### Libraries:
+- All external dependencies (code we download from the Internet) and internal dependencies (code we write ourselves for the various subsystems) are located in the `traceinvaders2/libraries` folder. It is crucial that these files live in the `libraries` folder, otherwise Arduino IDE will not recognize them when we include them in the project. As long as the `.hpp` and `.cpp` library are together somewhere in the libraries folder, including them in your sketches is as simple as writing the one line `#include <dependency_name.hpp>`.
+- The `config.hpp` file contains all of the pin assignments and config flags that are required for our project to run. Every subsystem module, the main sketch, and all test sketches **must** `#include` this file.
 
 ### Test suites:
-- When creating a new test suite, place your `.ino` file into a folder in `/test/`. Make sure that the sketch and its containing folder have the exact same name.
+- When creating a new test suite, place your `.ino` file into a folder in `/test/`. Make sure that the sketch and its containing folder have the exact same name, otherwise Arduino IDE will not recognize it.

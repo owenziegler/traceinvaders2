@@ -3,8 +3,8 @@
 
 //#include "../../lib/config/config.hpp"
 //#include "../../lib/modules/module_driver.hpp"
-#include "config.hpp"
-#include "module_driver.hpp"
+#include <config.hpp>
+#include <module_driver.hpp>
 #include <driver/timer.h>
 
 hw_timer_t *timer = NULL;

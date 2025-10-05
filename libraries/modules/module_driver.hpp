@@ -26,8 +26,8 @@ void right();
 
 void reverse();
 
-void nudgeleft();
+void nudgeLeft();
 
-void nudgeright();
+void nudgeRight();
 
 #endif
