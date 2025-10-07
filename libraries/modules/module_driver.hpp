@@ -10,24 +10,23 @@ Header file for motor driver code, contains declaration of all motor driver func
 #ifndef MODULE_DRIVER_HPP
 #define MODULE_DRIVER_HPP
 
-/*
+#include <cstdint>
 
-*/
-void driverSetup();
-void setSpeed(float left, float right);
-void setMotorL(int speed);
-void setMotorR(int speed);
+class Motor {
+    public:
+        Motor(uint8_t in1, uint8_t in2, uint8_t pwm);
+        void drive(int pwm);
+    private:
+        uint8_t _in1, _in2, _pwm;
+};
 
-void drive(int left, int right);
-
-void left();
-
-void right();
-
-void reverse();
-
-void nudgeLeft();
-
-void nudgeRight();
+class Driver {
+    public:
+        Driver();
+        void drive(int pwmL, int pwmR);
+    private:
+        Motor _left;
+        Motor _right;
+};
 
 #endif

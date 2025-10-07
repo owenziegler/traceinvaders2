@@ -8,8 +8,8 @@ Owen Ziegler
 Description:
 Utility functions for trace-invaders project that don't belong to any specific module or subsystem.
 */
-#include "utils.hpp"
-#include "config.hpp"
+#include <utils.hpp>
+#include <config.hpp>
 #include <stdint.h>
 #include <Arduino.h>
 

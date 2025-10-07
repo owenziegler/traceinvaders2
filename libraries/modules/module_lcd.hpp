@@ -11,12 +11,18 @@ Header file for LCD module
 #ifndef MODULE_LCD_HPP
 #define MODULE_LCD_HPP
 
-void lcdSetup();
+#include <cstdint>
 
-void displayStrings(String line1, String line2);
+#include <LiquidCrystal_I2C.h>
 
-void clearDisplay();
-
-void displayError();
+class Lcd  {
+    public:
+        Lcd(uint8_t addr, String top, String bottom);
+        void display(String top, String bottom);
+        void clear();
+    private:
+        LiquidCrystal_I2C _lcd;
+        void _error();
+};
 
 #endif

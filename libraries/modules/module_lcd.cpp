@@ -9,44 +9,42 @@ Implementation for LCD module. Contains definitions of all LCD module functions.
 */
 
 #include <Arduino.h>
+
 #include <LiquidCrystal_I2C.h>
-#include "module_lcd.hpp"
-#include "config.hpp"
 
-#define COLS 16
-#define ROWS 2
+#include <module_lcd.hpp>
+#include <config.hpp>
 
-LiquidCrystal_I2C lcd(_I2C_ADDR_LCD, COLS, ROWS);
 
-void lcdSetup() {
-  Wire.begin(_I2C_PIN_SDA,_I2C_PIN_SCL);
-  lcd.init();
-  lcd.backlight();
+Lcd::Lcd(uint8_t addr, String top, String bottom)
+  : _lcd(addr, __UI_LCD_COLS, __UI_LCD_ROWS) {
+  Wire.begin(__I2C_PIN_SDA,__I2C_PIN_SCL);
+  _lcd.init();
+  _lcd.backlight();
 }
 
-void displayStrings(String line1, String line2) {
+void Lcd::display(String top, String bottom) {
   //check for valid input
-  if(line1.length() > 16 || line2.length() > 16) {
-    displayError();
-    //return -1;
+  if(top.length() > 16 || bottom.length() > 16) {
+    _error();
   }
   else {
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print(line1);
-    lcd.setCursor(0,1);
-    lcd.print(line2);
+    _lcd.clear();
+    _lcd.setCursor(0,0);
+    _lcd.print(top);
+    _lcd.setCursor(0,1);
+    _lcd.print(bottom);
   }
 }
 
-void clearDisplay() {
-  lcd.clear();
+void Lcd::clear() {
+  _lcd.clear();
 }
 
-void displayError() {
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Error");
-  lcd.setCursor(0,1);
-  lcd.print("Invalid Input");
+void Lcd::_error() {
+  _lcd.clear();
+  _lcd.setCursor(0,0);
+  _lcd.print("Error");
+  _lcd.setCursor(0,1);
+  _lcd.print("Invalid Input");
 }
