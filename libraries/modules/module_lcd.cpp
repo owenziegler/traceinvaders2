@@ -18,9 +18,22 @@ Implementation for LCD module. Contains definitions of all LCD module functions.
 
 Lcd::Lcd(uint8_t addr, String top, String bottom)
   : _lcd(addr, __UI_LCD_COLS, __UI_LCD_ROWS) {
+
+  Serial.print("Establishing I2C connection... ");
   Wire.begin(__I2C_PIN_SDA,__I2C_PIN_SCL);
+  Serial.println("Established succesfully.");
+
+  Serial.print("Initializing LCD... ");
   _lcd.init();
+  Serial.println("Initialized successfully.");
+  
+  Serial.print("Turning on LCD backlight... ");
   _lcd.backlight();
+  Serial.println("Turned on successfully.");
+  
+  Serial.print("Writing initial strings... ");
+  display(top, bottom);
+  Serial.println("Strings written successfully.");
 }
 
 void Lcd::display(String top, String bottom) {

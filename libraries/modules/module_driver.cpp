@@ -36,8 +36,12 @@ void Motor::drive(int pwm) {
 Driver::Driver() 
   : _left(__DRIVER_PIN_LIN1, __DRIVER_PIN_LIN2, __DRIVER_PIN_PWML),
     _right(__DRIVER_PIN_RIN1, __DRIVER_PIN_RIN2, __DRIVER_PIN_PWMR) {
+  Serial.print("Setting standby pin mode... ");
   pinMode(__DRIVER_PIN_STBY, OUTPUT);
+  Serial.println("Set successfully");
+  Serial.print("Setting standby pin to HIGH... ");
   digitalWrite(__DRIVER_PIN_STBY, HIGH);
+  Serial.println("Set successfully");
 }
 
 void Driver::drive(int pwmL, int pwmR) {

@@ -22,10 +22,10 @@ constexpr std::uint8_t __IR_PIN_0 = 35;
 constexpr std::uint8_t __IR_PIN_1 = 34;
 constexpr std::uint8_t __IR_PIN_2 = 32;
 constexpr std::uint8_t __IR_PIN_3 = 36;
-constexpr std::uint8_t __IR_PIN_4 = 26;
+constexpr std::uint8_t __IR_PIN_4 = 39;
 
 // UI
-constexpr std::uint8_t __UI_PIN_BUTTON = 1;
+constexpr std::uint8_t __UI_PIN_BUTTON = 4;
 constexpr std::uint8_t __UI_LCD_COLS = 16;
 constexpr std::uint8_t __UI_LCD_ROWS = 2;
 
@@ -41,7 +41,7 @@ constexpr std::uint8_t __DRIVER_PIN_LIN1 = 12;
 constexpr std::uint8_t __DRIVER_PIN_LIN2 = 13;
 constexpr std::uint8_t __DRIVER_PIN_PWML = 25;
 constexpr std::uint8_t __DRIVER_PIN_RIN1 = 27;
-constexpr std::uint8_t __DRIVER_PIN_RIN2 = 39;
+constexpr std::uint8_t __DRIVER_PIN_RIN2 = 26;
 constexpr std::uint8_t __DRIVER_PIN_PWMR = 33;
 constexpr std::uint8_t __DRIVER_PIN_STBY = 14;
 

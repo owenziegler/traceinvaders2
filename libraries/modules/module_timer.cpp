@@ -14,7 +14,9 @@ Implementation file for timer module functions
 
 //Constructor, sets starting time (milliseconds since power-up)
 Timer::Timer() {
+  Serial.print("Initializing timer... ");
   start = 0;
+  Serial.println("Initialized successfully");
 }
 
 void Timer::timerStart() {
