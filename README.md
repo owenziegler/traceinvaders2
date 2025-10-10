@@ -2,6 +2,9 @@
 
 ## Important usage notes:
 
+### Editing:
+- Nothing in `/libraries/` will be editable by Arduino IDE, so you'll have to open those files in a different text editor. Ignore the errors about imports, the external text editor won't see `<Arduino.h>` so you'll get a bunch of false positive errors in the editor.
+
 ### Setup:
 - Clone this repository to a folder named `traceinvaders2` somewhere on your computer.
 - In Arduino IDE, go to the top toolbar and select File > Preference or press Ctrl+, to open Settings. The first setting in the list will be your sketchbook location. Change this from the default so it points to the `traceinvaders2` folder you just created.
