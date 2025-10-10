@@ -1,300 +1,171 @@
-/*
-traceinvaders.ino
-
-Owen Ziegler
-2025 09 22
-
-Description: Main module for Trace Invader navigation program.
-Contains main state machine logic.
-*/
-
 #include <Arduino.h>
 #include <cstdint>
 
-#include "utils.hpp"
-#include "config.hpp"
-#include "module_ir.hpp"
-#include "module_lcd.hpp"
-#include "module_driver.hpp"
-#include "module_timer.hpp"
+#include <QuickPID.h>
 
-//states
-#define RESET 0
-#define COUNTDOWN 1
-#define RUNUP 2
-#define LAP 3
-#define LOST 4
-#define FINISH 5
+#include <utils.hpp>
+#include <config.hpp>
+#include <module_ir.hpp>
+#include <module_lcd.hpp>
+#include <module_driver.hpp>
+#include <module_timer.hpp>
+#include <module_encoder.hpp>
 
-uint8_t lineState;            //
-uint8_t currentState = 0;        //
-uint8_t nextState = 0;
-uint8_t countdownTimer = 5;
-bool running = 0;             //
-uint32_t stateCounter = 0;         //generic counter var used by states. reset to 0 on state change
-uint8_t tickCounter = 0;          //
-uint8_t lostCounter;
-float lapTime;
-Timer timer;
+hw_timer_t* timer = NULL;
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+SemaphoreHandle_t timerSemaphore;
+TaskHandle_t controlTaskHandle = NULL;
+
+Driver *driver;
+IrArray *irArray;
+Lcd *lcd;
+Encoder *encoderL;
+Encoder *encoderR;
+
+//QuickPID parameters
+float targetRpmLeft;
+float encoderRpmLeft;
+float pidOutputLeft;
+
+float targetRpmRight;
+float encoderRpmRight;
+float pidOutputRight;
+
+//we need to tune these
+float Kp = 0;
+float Ki = 0;
+float Kd = 0;
+
+//initialize using "new" in setup()
+QuickPID *pidLeft;
+QuickPID *pidRight;
+
+volatile float rpmLeft;
+volatile float rpmRight;
+
+volatile int i = 0;
+volatile bool phase = 0;
+
+void ARDUINO_ISR_ATTR run() {
+    //collect data
+    portENTER_CRITICAL(&mux);
+    //right now rpm only shows as 214 or 0, no in between. don't know if it's a math thing or a sensor thing.
+    //maybe check vs pulse counts?
+    rpmLeft = (encoderL->getPulseCount() / 50) * (__ENCODER_RPM_NUMERATOR / __ENCODER_RPM_DENOMINATOR);
+    rpmRight = (encoderR->getPulseCount() / 50) * (__ENCODER_RPM_NUMERATOR / __ENCODER_RPM_DENOMINATOR);
+    portEXIT_CRITICAL(&mux);
+
+    //displays weird on lcd, in the thousands. On serial it has the behavior described above
+    //lcd->display(String(rpmLeft),String(rpmRight));
+    Serial.print(String(rpmLeft));
+    Serial.print(" ");
+    Serial.print(String(rpmRight));
+    Serial.println("");
+
+    //ramp up and down each motor for testing
+    if(phase == 0) {
+        driver->drive(i, 0);
+        i++;
+        if(i == 255) {
+            phase = 1;
+        }
+    }
+    else if (phase == 1) {
+        driver->drive(i, 0);
+        i--;
+        if(i == 0) {
+            phase = 2;
+        }
+    }
+    else if (phase == 2) {
+        driver->drive(0, i);
+        i++;
+        if(i == 255) {
+            phase = 3;
+        }
+    }
+    else if (phase == 3) {
+        driver->drive(0, i);
+        i--;
+        if(i == 0) {
+            phase = 0;
+        }
+    }
+}
+
+//this is from chatgpt, it's been tested to work.
+//every 50ms timer calls onTimer
+void ARDUINO_ISR_ATTR onTimer() {
+  // Signal the task to run
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  xSemaphoreGiveFromISR(timerSemaphore, &xHigherPriorityTaskWoken);
+  if (xHigherPriorityTaskWoken) {
+    portYIELD_FROM_ISR();  // Request context switch if needed
+  }
+}
+
+
+void controlTask(void * parameter) {
+    for (;;) {
+        if(xSemaphoreTake(timerSemaphore, portMAX_DELAY)) {
+            run();
+        }
+    }
+}
 
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-  irSetup();
-  lcdSetup();
-  driverSetup();
-  pinMode(_UI_PIN_BUTTON, INPUT_PULLUP);
-  timer = Timer();
+    Serial.begin(115200);
+    delay(500);
+    Serial.println("Serial connection established.");
+    
+    Serial.print("Initializing semaphore... ");
+    timerSemaphore = xSemaphoreCreateBinary();
+    Serial.println("Initialized successfully.");
+
+    Serial.print("Creating RTOS task... ");
+    xTaskCreatePinnedToCore(
+        controlTask,
+        "controlTask",
+        4096,
+        NULL,
+        1,
+        &controlTaskHandle,
+        1
+    );
+    Serial.println("Created successfully.");
+    
+    Serial.println("Initializing subsystem modules...");
+    Serial.print("   Driver.............");
+    driver = new Driver();
+    driver->drive(255,255);
+    Serial.println("Initialized successfully.");
+
+    Serial.print("   IR Array...........");
+    irArray = new IrArray();
+    Serial.println("Initialized successfully.");
+
+    Serial.print("   LCD................");
+    lcd = new Lcd(__I2C_ADDR_LCD, "Trace Invader", "Get ready!");
+    Serial.println("Initialized successfully.");
+    
+    Serial.print("   Left Encoder.......");
+    encoderL = new Encoder(mux, __ENCODER_PIN_L_A);
+    Serial.println("Initialized successfully.");
+
+    Serial.print("   Right Encoder......");
+    encoderR = new Encoder(mux, __ENCODER_PIN_R_A);
+    Serial.println("Initialized successfully.");
+    Serial.println("Subsystem modules initialized successfully.");
+
+    Serial.println("Initializing timer...");
+    //most of these params should be moved to config.hpp
+    //start timer at 1 MHz sample rate
+    timer = timerBegin(1000000);
+    //attach onTimer to timer when the alarm triggers
+    timerAttachInterrupt(timer, &onTimer);
+    //set the timer to go every 50 ms (50000 us). auto-repeat=true, auto-repeat number=0 (infinite)
+    timerAlarm(timer, 50000, true, 0);
 }
 
-//FSM state handler functions
-
-void handleReset() {
-  displayStrings("Trace Invader", "");
-  //if the button is pressed, wait for it to become unpressed
-  //when the button is unpressed, set nextState to COUNTDOWN
-  if(!digitalRead(_UI_PIN_BUTTON)) { //if the button is pressed
-    while (digitalRead(_UI_PIN_BUTTON)) { //wait for the button to become unpressed
-      delay(10); //wait 10 ms between checks to reduce CPU usage
-    }
-    nextState = COUNTDOWN;
-  }
-}
-
-void handleCountdown() {
-  //while countdownTimer > 0:
-  //display countdownTimer to screen
-  //wait 1000 ms
-  //clear screen
-  //decrement countdownTimer
-
-  //reset countdownTimer to 5
-  //transition to handleRunup
-  if(countdownTimer > 0) {
-    displayStrings("Get Ready!", String(countdownTimer));
-    delay(1000);
-    countdownTimer--;
-    clearDisplay();
-  }
-  else {
-    countdownTimer = 5;
-    nextState = RUNUP;
-  }
-}
-
-void handleRunup() {
-  //same control logic as handleLap, except when a tick is crossed,
-  //nextState is set to LAP and the stopwatch is started
-  clearDisplay();
-  lineState = getLineState();
-  displayStrings("Runup",uint8ToBinary(lineState));
-  switch(lineState) {
-    //center
-    case 0b11011:
-      setSpeed(1,1);
-      break;
-    //left 1
-    case 0b10011:
-      //drive(196,256);
-      setSpeed(0.5,1);
-      break;
-    //left 2
-    case 0b10111:
-      //drive(64,256);
-      setSpeed(0,1);
-      break;
-    //left 3 & 4
-    case 0b00111:
-    case 0b01111:
-      //drive(32,196);
-      setSpeed(0,1);
-      break;  
-    //right 1
-    case 0b11001:
-      //drive(256,196);
-      setSpeed(1,0.5);
-      break;
-    //right 2
-    case 0b11101:
-      //drive(256,64);
-      setSpeed(1,0);
-      break;
-    //right 3 & 4
-    case 0b11100:
-    case 0b11110:
-      //drive(196,32);
-      setSpeed(1,0);
-      break;
-    //any other state
-    case 0b10000:
-    case 0b00001:
-    case 0b00000:
-      tickCounter = 0;
-      setSpeed(0.5,0.5);
-      break;
-    case 0b01011:
-    case 0b01001:
-    case 0b00011:
-      setSpeed(0,0);
-      delay(100);
-      tickCounter++;
-      if(tickCounter > 5) {
-        timer.timerStart();
-        nextState = LAP;
-      }
-      break;
-    default:
-      //drive(192,192);
-      tickCounter = 0;
-      setSpeed(0.5,0.5);
-      break;
-  }
-}
-
-void handleLap() {
-  //normal control logic
-  //when tick is crossed, next State is set to FINISH and stopwatch is ended
-  //when lineState == 0b11111 for more than a certain number of loops, transition to LOST state
-  lineState = getLineState();
-  switch(lineState) {
-    //center
-    case 0b11011:
-      setMotorA(128);
-      setMotorB(128);
-      break;
-    //left 1
-    case 0b10011:
-      //drive(196,256);
-      setMotorA(100);
-      setMotorB(128);
-      break;
-    //left 2
-    case 0b10111:
-      //drive(64,256);
-      setMotorA(64);
-      setMotorB(128);
-      break;
-    //left 3 & 4
-    case 0b00111:
-    case 0b01111:
-      //drive(32,196);
-      setMotorA(32);
-      setMotorB(128);
-      break;  
-    //right 1
-    case 0b11001:
-      //drive(256,196);
-      setMotorA(128);
-      setMotorB(100);
-      break;
-    //right 2
-    case 0b11101:
-      //drive(256,64);
-      setMotorA(128);
-      setMotorB(64);
-      break;
-    //right 3 & 4
-    case 0b11100:
-    case 0b11110:
-      //drive(196,32);
-      setMotorA(128);
-      setMotorB(32);
-      break;
-    //any other state
-    case 0b10000:
-    case 0b00001:
-    case 0b00000:
-      tickCounter = 0;
-      setMotorA(128);
-      setMotorB(128);
-      break;
-    case 0b01011:
-    case 0b01001:
-    case 0b00011:
-      setMotorA(0);
-      setMotorB(0);
-      delay(100);
-      tickCounter++;
-      if(tickCounter > 5) {
-        lapTime = timer.timerLap();
-        nextState = FINISH;
-      }
-      break;
-    case 0b11111:
-      lostCounter++;
-      if(lostCounter > 5) {
-        lostCounter = 0;
-        nextState = LOST;
-      }
-    default:
-      //drive(192,192);
-      tickCounter = 0;
-      setMotorA(128);
-      setMotorB(128);
-      break;
-  }
-}
-
-void handleLost() {
-  lineState = getLineState();
-  if (lineState == 0b11111) {
-    setMotorA(-128);
-    setMotorB(-128);
-  }
-  else {
-    nextState = LAP;
-  }
-}
-
-void handleFinish() {
-  setMotorA(0);
-  setMotorB(0);
-  displayStrings("Lap Time (s):", String(lapTime));
-  if(!digitalRead(_UI_PIN_BUTTON)) { //if the button is pressed
-    while (digitalRead(_UI_PIN_BUTTON)) { //wait for the button to become unpressed
-      delay(10); //wait 10 ms between checks to reduce CPU usage
-    }
-    nextState = RESET;
-  }
-}
-
-//main loop function
-void loop() {
-  //state cases
-  switch (currentState) {
-    case RESET:
-      handleReset();
-      break;
-    case COUNTDOWN:
-      handleCountdown();
-      break;
-    case RUNUP:
-      handleRunup();
-      break;
-    case LAP:
-      handleLost();
-      break;
-    case LOST:
-      handleLost();
-      break;
-    case FINISH:
-      handleFinish();
-      break;
-  }
-    //check for reset
-  if(!digitalRead(_UI_PIN_BUTTON) && currentState != RESET)
-  {
-    while(digitalRead(_UI_PIN_BUTTON))
-    {
-      delay(10);
-    }
-    nextState = RESET;
-  }
-  //state switcher
-  if(nextState != currentState) {
-    stateCounter = 0;
-    currentState = nextState;
-  }
-  //short delay
-  delay(5);
-}
+//loop has been replaced by controlTask, it never gets called 
+void loop() {}
