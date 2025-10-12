@@ -23,12 +23,12 @@ Encoder *encoderL;
 Encoder *encoderR;
 
 //QuickPID parameters
-float targetRpmLeft;
-float encoderRpmLeft;
+float targetPulseCountLeft;
+float encoderPulseCountLeft;
 float pidOutputLeft;
 
-float targetRpmRight;
-float encoderRpmRight;
+float targetPulseCountRight;
+float encoderPulseCountRight;
 float pidOutputRight;
 
 //we need to tune these
@@ -40,57 +40,28 @@ float Kd = 0;
 QuickPID *pidLeft;
 QuickPID *pidRight;
 
-volatile float rpmLeft;
-volatile float rpmRight;
-
 volatile int i = 0;
 volatile bool phase = 0;
 
+//sensor data
+volatile uint8_t irState;
+
+
 void ARDUINO_ISR_ATTR run() {
-    //collect data
-    portENTER_CRITICAL(&mux);
-    //right now rpm only shows as 214 or 0, no in between. don't know if it's a math thing or a sensor thing.
-    //maybe check vs pulse counts?
-    rpmLeft = (encoderL->getPulseCount() / 50) * (__ENCODER_RPM_NUMERATOR / __ENCODER_RPM_DENOMINATOR);
-    rpmRight = (encoderR->getPulseCount() / 50) * (__ENCODER_RPM_NUMERATOR / __ENCODER_RPM_DENOMINATOR);
-    portEXIT_CRITICAL(&mux);
+    //collect sensor data
+    irState = irArray->getLineState();
+    encoderPulseCountLeft = encoderL->getPulseCount();
+    encoderPulseCountRight = encoderR->getPulseCount();
 
-    //displays weird on lcd, in the thousands. On serial it has the behavior described above
-    //lcd->display(String(rpmLeft),String(rpmRight));
-    Serial.print(String(rpmLeft));
-    Serial.print(" ");
-    Serial.print(String(rpmRight));
-    Serial.println("");
+    //act on sensor data
+    //navigate()
 
-    //ramp up and down each motor for testing
-    if(phase == 0) {
-        driver->drive(i, 0);
-        i++;
-        if(i == 255) {
-            phase = 1;
-        }
-    }
-    else if (phase == 1) {
-        driver->drive(i, 0);
-        i--;
-        if(i == 0) {
-            phase = 2;
-        }
-    }
-    else if (phase == 2) {
-        driver->drive(0, i);
-        i++;
-        if(i == 255) {
-            phase = 3;
-        }
-    }
-    else if (phase == 3) {
-        driver->drive(0, i);
-        i--;
-        if(i == 0) {
-            phase = 0;
-        }
-    }
+    //compute pid;
+    pidLeft->Compute();
+    pidRight->Compute();
+    
+    //set pwm
+    driver->drive((int)pidOutputLeft, (int)pidOutputRight);
 }
 
 //this is from chatgpt, it's been tested to work.
@@ -157,14 +128,36 @@ void setup() {
     Serial.println("Initialized successfully.");
     Serial.println("Subsystem modules initialized successfully.");
 
+    Serial.println("Setting up PID...");
+    Serial.print("left pid... ");
+    pidLeft = new QuickPID(
+        &encoderPulseCountLeft,
+        &pidOutputLeft,
+        &targetPulseCountLeft
+    );
+    pidLeft->SetOutputLimits(0,255);
+    pidLeft->SetSampleTimeUs(50000);
+    Serial.println("done");
+
+    Serial.print("right pid... ");
+    pidRight = new QuickPID(
+        &encoderPulseCountRight,
+        &pidOutputRight,
+        &targetPulseCountRight
+    );
+    pidRight->SetOutputLimits(0,255);
+    pidRight->SetSampleTimeUs(50000);
+    Serial.println("done");
+    
+
     Serial.println("Initializing timer...");
     //most of these params should be moved to config.hpp
     //start timer at 1 MHz sample rate
-    timer = timerBegin(1000000);
+    timer = timerBegin(__TIMER_HZ);
     //attach onTimer to timer when the alarm triggers
     timerAttachInterrupt(timer, &onTimer);
     //set the timer to go every 50 ms (50000 us). auto-repeat=true, auto-repeat number=0 (infinite)
-    timerAlarm(timer, 50000, true, 0);
+    timerAlarm(timer, __TIMER_PERIOD, __TIMER_AUTORELOAD, __TIMER_RELOAD_COUNT);
 }
 
 //loop has been replaced by controlTask, it never gets called 

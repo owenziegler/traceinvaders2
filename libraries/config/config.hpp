@@ -56,7 +56,7 @@ constexpr float __ENCODER_RPM_DENOMINATOR = 280;
 // Timers & Interrupts
 constexpr std::uint32_t __TIMER_HZ = 1000000; // 1 MHz clock
 constexpr bool __TIMER_AUTORELOAD = true;
-constexpr std::uint32_t __TIMER_PERIOD = 100000; // 100 ms (100000 us)
-
+constexpr std::uint32_t __TIMER_RELOAD_COUNT = 0; //infinite reloads
+constexpr std::uint32_t __TIMER_PERIOD = 50000; // 100 ms (100000 us)
 
 #endif
