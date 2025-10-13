@@ -32,8 +32,8 @@ float encoderPulseCountRight;
 float pidOutputRight;
 
 //we need to tune these
-float Kp = 0;
-float Ki = 0;
+float Kp = 20;
+float Ki = 40;
 float Kd = 0;
 
 //initialize using "new" in setup()
@@ -41,13 +41,13 @@ QuickPID *pidLeft;
 QuickPID *pidRight;
 
 volatile int i = 0;
-volatile bool phase = 0;
+volatile int phase = 0;
 
 //sensor data
 volatile uint8_t irState;
 
-
 void ARDUINO_ISR_ATTR run() {
+    uint32_t time = micros();
     //collect sensor data
     irState = irArray->getLineState();
     encoderPulseCountLeft = encoderL->getPulseCount();
@@ -56,12 +56,67 @@ void ARDUINO_ISR_ATTR run() {
     //act on sensor data
     //navigate()
 
-    //compute pid;
     pidLeft->Compute();
     pidRight->Compute();
-    
+
     //set pwm
     driver->drive((int)pidOutputLeft, (int)pidOutputRight);
+    if(phase == 0) {
+        targetPulseCountLeft = 5;
+        targetPulseCountRight = 5;
+        i++;
+        if(i == 500) {
+            phase++;
+            i = 0;
+        }
+    }
+    else if (phase == 1) {
+        targetPulseCountLeft = 10;
+        targetPulseCountRight = 10;
+        i++;
+        if(i == 500) {
+            phase++;
+            i = 0;
+        }
+    }
+    else if (phase == 2) {
+        targetPulseCountLeft = 15;
+        targetPulseCountRight = 15;
+        i++;
+        if(i == 500) {
+            phase++;
+            i = 0;
+        }
+    }
+    else if (phase == 3) {
+        targetPulseCountLeft = 20;
+        targetPulseCountRight = 20;
+        i++;
+        if(i == 500) {
+            phase++;
+            i = 0;
+        }
+    }
+    else if (phase == 4) {
+        targetPulseCountLeft = 15;
+        targetPulseCountRight = 15;
+        i++;
+        if(i == 500) {
+            phase++;
+            i = 0;
+        }
+    }
+    else if (phase == 5) {
+        targetPulseCountLeft = 10;
+        targetPulseCountRight = 10;
+        i++;
+        if(i == 500) {
+            phase = 0;
+            i = 0;
+        }
+    }
+
+    Serial.println(abs((int)targetPulseCountLeft - (int)encoderPulseCountLeft));Vk
 }
 
 //this is from chatgpt, it's been tested to work.
@@ -133,20 +188,26 @@ void setup() {
     pidLeft = new QuickPID(
         &encoderPulseCountLeft,
         &pidOutputLeft,
-        &targetPulseCountLeft
+        &targetPulseCountLeft,
+        Kp, Ki, Kd,
+        QuickPID::Action::direct
     );
+    pidLeft->SetMode(QuickPID::Control::automatic);
     pidLeft->SetOutputLimits(0,255);
-    pidLeft->SetSampleTimeUs(50000);
+    pidLeft->SetSampleTimeUs(__TIMER_PERIOD);
     Serial.println("done");
 
     Serial.print("right pid... ");
     pidRight = new QuickPID(
         &encoderPulseCountRight,
         &pidOutputRight,
-        &targetPulseCountRight
+        &targetPulseCountRight,
+        Kp, Ki, Kd,
+        QuickPID::Action::direct
     );
+    pidRight->SetMode(QuickPID::Control::automatic);
     pidRight->SetOutputLimits(0,255);
-    pidRight->SetSampleTimeUs(50000);
+    pidRight->SetSampleTimeUs(__TIMER_PERIOD);
     Serial.println("done");
     
 
@@ -158,6 +219,9 @@ void setup() {
     timerAttachInterrupt(timer, &onTimer);
     //set the timer to go every 50 ms (50000 us). auto-repeat=true, auto-repeat number=0 (infinite)
     timerAlarm(timer, __TIMER_PERIOD, __TIMER_AUTORELOAD, __TIMER_RELOAD_COUNT);
+    //set target pulse count
+    targetPulseCountLeft = 10;
+    targetPulseCountRight = 10;
 }
 
 //loop has been replaced by controlTask, it never gets called 
