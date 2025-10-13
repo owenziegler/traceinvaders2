@@ -9,6 +9,7 @@ class Encoder {
     Encoder(portMUX_TYPE &mux, uint8_t encoderPin);
     void ARDUINO_ISR_ATTR onPulse();
     int getPulseCount();
+    void resetPulseCount();
     uint8_t encoderPin;
   private:
     volatile uint32_t _pulseCount;

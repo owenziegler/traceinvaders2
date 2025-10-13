@@ -32,19 +32,63 @@ float encoderPulseCountRight;
 float pidOutputRight;
 
 //we need to tune these
-float Kp = 20;
-float Ki = 40;
-float Kd = 0;
+float Kp = 6;
+float Ki = 10;
+float Kd = 2;
 
 //initialize using "new" in setup()
 QuickPID *pidLeft;
 QuickPID *pidRight;
 
 volatile int i = 0;
-volatile int phase = 0;
+volatile bool phase = 0;
 
 //sensor data
 volatile uint8_t irState;
+
+void ARDUINO_ISR_ATTR navigate() {
+    switch(irState) {
+        case 0b01111:
+            targetPulseCountLeft = 0;
+            targetPulseCountRight = 5;
+            break;
+        case 0b00111:
+            targetPulseCountLeft = 2;
+            targetPulseCountRight = 5;
+            break;
+        case 0b10111:
+            targetPulseCountLeft = 8;
+            targetPulseCountRight = 14;
+            break;
+        case 0b10011:
+            targetPulseCountLeft = 12;
+            targetPulseCountRight = 16;
+            break;
+        case 0b11011:
+            targetPulseCountLeft = 20;
+            targetPulseCountRight = 20;
+            break;
+        case 0b11001:
+            targetPulseCountLeft = 16;
+            targetPulseCountRight = 12;
+            break;
+        case 0b11101:
+            targetPulseCountLeft = 7;
+            targetPulseCountRight = 4;
+            break;
+        case 0b11100:
+            targetPulseCountLeft = 5;
+            targetPulseCountRight = 2;
+            break;
+        case 0b11110:
+            targetPulseCountLeft = 5;
+            targetPulseCountRight = 0;
+            break;
+        default:
+            targetPulseCountLeft = 10;
+            targetPulseCountRight = 10;
+    }
+}
 
 void ARDUINO_ISR_ATTR run() {
     uint32_t time = micros();
@@ -54,70 +98,20 @@ void ARDUINO_ISR_ATTR run() {
     encoderPulseCountRight = encoderR->getPulseCount();
 
     //act on sensor data
-    //navigate()
+    if (phase) {
+        navigate();
+    }
 
     pidLeft->Compute();
     pidRight->Compute();
 
-    //set pwm
-    driver->drive((int)pidOutputLeft, (int)pidOutputRight);
-    if(phase == 0) {
-        targetPulseCountLeft = 5;
-        targetPulseCountRight = 5;
-        i++;
-        if(i == 500) {
-            phase++;
-            i = 0;
-        }
-    }
-    else if (phase == 1) {
-        targetPulseCountLeft = 10;
-        targetPulseCountRight = 10;
-        i++;
-        if(i == 500) {
-            phase++;
-            i = 0;
-        }
-    }
-    else if (phase == 2) {
-        targetPulseCountLeft = 15;
-        targetPulseCountRight = 15;
-        i++;
-        if(i == 500) {
-            phase++;
-            i = 0;
-        }
-    }
-    else if (phase == 3) {
-        targetPulseCountLeft = 20;
-        targetPulseCountRight = 20;
-        i++;
-        if(i == 500) {
-            phase++;
-            i = 0;
-        }
-    }
-    else if (phase == 4) {
-        targetPulseCountLeft = 15;
-        targetPulseCountRight = 15;
-        i++;
-        if(i == 500) {
-            phase++;
-            i = 0;
-        }
-    }
-    else if (phase == 5) {
-        targetPulseCountLeft = 10;
-        targetPulseCountRight = 10;
-        i++;
-        if(i == 500) {
-            phase = 0;
-            i = 0;
-        }
-    }
+    encoderL->resetPulseCount();
+    encoderR->resetPulseCount();
 
-    Serial.println(abs((int)targetPulseCountLeft - (int)encoderPulseCountLeft));Vk
+    driver->drive((int)pidOutputLeft, (int)pidOutputRight);
+    //lcd->display(String((int)pidOutputLeft), String((int)pidOutputRight));
 }
+
 
 //this is from chatgpt, it's been tested to work.
 //every 50ms timer calls onTimer
@@ -130,6 +124,17 @@ void ARDUINO_ISR_ATTR onTimer() {
   }
 }
 
+volatile uint32_t lastButtonTime = 0;
+
+void IRAM_ATTR onButton() {
+    uint32_t now = millis();
+    if (now - lastButtonTime > 200) {  // basic debounce
+        lastButtonTime = now;
+        portENTER_CRITICAL_ISR(&mux);
+        phase = !phase;
+        portEXIT_CRITICAL_ISR(&mux);
+    }
+}
 
 void controlTask(void * parameter) {
     for (;;) {
@@ -163,7 +168,7 @@ void setup() {
     Serial.println("Initializing subsystem modules...");
     Serial.print("   Driver.............");
     driver = new Driver();
-    driver->drive(255,255);
+    //driver->drive(255,255);
     Serial.println("Initialized successfully.");
 
     Serial.print("   IR Array...........");
@@ -182,6 +187,11 @@ void setup() {
     encoderR = new Encoder(mux, __ENCODER_PIN_R_A);
     Serial.println("Initialized successfully.");
     Serial.println("Subsystem modules initialized successfully.");
+
+    Serial.print("Button... ");
+    pinMode(__UI_PIN_BUTTON, INPUT_PULLUP);
+    attachInterrupt(__UI_PIN_BUTTON, onButton, FALLING);
+    Serial.println("Initialized successfully.");
 
     Serial.println("Setting up PID...");
     Serial.print("left pid... ");
@@ -209,7 +219,6 @@ void setup() {
     pidRight->SetOutputLimits(0,255);
     pidRight->SetSampleTimeUs(__TIMER_PERIOD);
     Serial.println("done");
-    
 
     Serial.println("Initializing timer...");
     //most of these params should be moved to config.hpp
@@ -220,9 +229,10 @@ void setup() {
     //set the timer to go every 50 ms (50000 us). auto-repeat=true, auto-repeat number=0 (infinite)
     timerAlarm(timer, __TIMER_PERIOD, __TIMER_AUTORELOAD, __TIMER_RELOAD_COUNT);
     //set target pulse count
-    targetPulseCountLeft = 10;
-    targetPulseCountRight = 10;
+    targetPulseCountLeft = 5;
+    targetPulseCountRight = 5;
 }
+
 
 //loop has been replaced by controlTask, it never gets called 
 void loop() {}

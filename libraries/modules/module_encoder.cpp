@@ -42,9 +42,14 @@ void ARDUINO_ISR_ATTR Encoder::onPulse() {
 int Encoder::getPulseCount() {
     portENTER_CRITICAL_ISR(&mux);
     int result = _pulseCount;
-    _pulseCount = 0;
     portEXIT_CRITICAL_ISR(&mux);
     return result;
+}
+
+void Encoder::resetPulseCount() {
+    portENTER_CRITICAL_ISR(&mux);
+    _pulseCount = 0;
+    portEXIT_CRITICAL_ISR(&mux);
 }
 
 
