@@ -13,6 +13,7 @@ Global constants and setting flags
 
 // Imports
 #include <cstdint>
+#include <unordered_map>
 #include <Arduino.h>
 
 //Settings
@@ -23,6 +24,27 @@ constexpr std::uint8_t __IR_PIN_1 = 34;
 constexpr std::uint8_t __IR_PIN_2 = 32;
 constexpr std::uint8_t __IR_PIN_3 = 36;
 constexpr std::uint8_t __IR_PIN_4 = 39;
+
+static std::unordered_map<std::uint8_t, std::int8_t> __IR_STATES {
+    {0b01111, -4}, //hard left turn
+    {0b00111, -3},
+    {0b10111, -2},
+    {0b10011, -1},
+    {0b11011, -0}, //centered
+    {0b11001,  1},
+    {0b11101,  2},
+    {0b11100,  3},
+    {0b11110,  4}, //hard right turn
+};
+
+enum class __IR_SPECIAL_STATES {
+    NOLINE =        0b11111,
+    CROSS =         0b00000,
+    LEFT_TICK_1 =   0b00011,
+    LEFT_TICK_2 =   0b00001,
+    RIGHT_TICK_1 =  0b11000,
+    RIGHT_TICK_2 =  0b10000
+};
 
 // UI
 constexpr std::uint8_t __UI_PIN_BUTTON = 4;
@@ -36,7 +58,6 @@ constexpr std::uint8_t __I2C_ADDR_LCD = 0x27;
 constexpr std::uint8_t __I2C_ADDR_GYRO = 0;
 
 // Motor Driver
-constexpr std::uint8_t __DRIVER_BASE_SPEED = 100;
 constexpr std::uint8_t __DRIVER_PIN_LIN1 = 12;
 constexpr std::uint8_t __DRIVER_PIN_LIN2 = 13;
 constexpr std::uint8_t __DRIVER_PIN_PWML = 25;
@@ -58,5 +79,23 @@ constexpr std::uint32_t __TIMER_HZ = 1000000; // 1 MHz clock
 constexpr bool __TIMER_AUTORELOAD = true;
 constexpr std::uint32_t __TIMER_RELOAD_COUNT = 0; //infinite reloads
 constexpr std::uint32_t __TIMER_PERIOD = 50000; // 100 ms (100000 us)
+
+//PID constants
+constexpr std::uint8_t __PID_KP = 6;
+constexpr std::uint8_t __PID_KI = 10;
+constexpr std::uint8_t __PID_KD = 2;
+
+// Navigation and State Machine
+constexpr std::uint8_t __NAV_BASE_SPEED = 40; //pulses/timer period
+constexpr std::uint8_t __NAV_CURVE = 0;
+constexpr std::uint8_t __NAV_SPEEDUP = 0;
+
+enum class __NAV_STATE {
+    RESET = 0,
+    RUNUP = 1,
+    LAP = 2,
+    FINISH = 3,
+    LOST = 4
+};
 
 #endif

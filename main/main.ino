@@ -10,6 +10,7 @@
 #include <module_driver.hpp>
 #include <module_timer.hpp>
 #include <module_encoder.hpp>
+#include <module_navigation.hpp>
 
 hw_timer_t* timer = NULL;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
@@ -21,6 +22,7 @@ IrArray *irArray;
 Lcd *lcd;
 Encoder *encoderL;
 Encoder *encoderR;
+Navigation *navigation;
 
 //QuickPID parameters
 float targetPulseCountLeft;
@@ -33,8 +35,8 @@ float pidOutputRight;
 
 //we need to tune these
 float Kp = 6;
-float Ki = 10;
-float Kd = 2;
+float Ki = 2;
+float Kd = 0;
 
 //initialize using "new" in setup()
 QuickPID *pidLeft;
@@ -46,50 +48,6 @@ volatile bool phase = 0;
 //sensor data
 volatile uint8_t irState;
 
-void ARDUINO_ISR_ATTR navigate() {
-    switch(irState) {
-        case 0b01111:
-            targetPulseCountLeft = 0;
-            targetPulseCountRight = 5;
-            break;
-        case 0b00111:
-            targetPulseCountLeft = 2;
-            targetPulseCountRight = 5;
-            break;
-        case 0b10111:
-            targetPulseCountLeft = 8;
-            targetPulseCountRight = 14;
-            break;
-        case 0b10011:
-            targetPulseCountLeft = 12;
-            targetPulseCountRight = 16;
-            break;
-        case 0b11011:
-            targetPulseCountLeft = 20;
-            targetPulseCountRight = 20;
-            break;
-        case 0b11001:
-            targetPulseCountLeft = 16;
-            targetPulseCountRight = 12;
-            break;
-        case 0b11101:
-            targetPulseCountLeft = 7;
-            targetPulseCountRight = 4;
-            break;
-        case 0b11100:
-            targetPulseCountLeft = 5;
-            targetPulseCountRight = 2;
-            break;
-        case 0b11110:
-            targetPulseCountLeft = 5;
-            targetPulseCountRight = 0;
-            break;
-        default:
-            targetPulseCountLeft = 10;
-            targetPulseCountRight = 10;
-    }
-}
-
 void ARDUINO_ISR_ATTR run() {
     uint32_t time = micros();
     //collect sensor data
@@ -99,7 +57,7 @@ void ARDUINO_ISR_ATTR run() {
 
     //act on sensor data
     if (phase) {
-        navigate();
+        navigation->navigate();
     }
 
     pidLeft->Compute();
@@ -204,6 +162,7 @@ void setup() {
     );
     pidLeft->SetMode(QuickPID::Control::automatic);
     pidLeft->SetOutputLimits(0,255);
+    pidLeft->SetAntiWindupMode(QuickPID::iAwMode::iAwCondition);
     pidLeft->SetSampleTimeUs(__TIMER_PERIOD);
     Serial.println("done");
 
@@ -217,7 +176,16 @@ void setup() {
     );
     pidRight->SetMode(QuickPID::Control::automatic);
     pidRight->SetOutputLimits(0,255);
+    pidRight->SetAntiWindupMode(QuickPID::iAwMode::iAwCondition);
     pidRight->SetSampleTimeUs(__TIMER_PERIOD);
+    Serial.println("done");
+
+    Serial.print("Inititalizing navigation...");
+    navigation = new Navigation(
+        &irState,
+        &targetPulseCountLeft,
+        &targetPulseCountRight
+    );
     Serial.println("done");
 
     Serial.println("Initializing timer...");
@@ -229,8 +197,8 @@ void setup() {
     //set the timer to go every 50 ms (50000 us). auto-repeat=true, auto-repeat number=0 (infinite)
     timerAlarm(timer, __TIMER_PERIOD, __TIMER_AUTORELOAD, __TIMER_RELOAD_COUNT);
     //set target pulse count
-    targetPulseCountLeft = 5;
-    targetPulseCountRight = 5;
+    targetPulseCountLeft = 0.5 * __NAV_BASE_SPEED;
+    targetPulseCountRight = 0.5 * __NAV_BASE_SPEED;
 }
 
 
