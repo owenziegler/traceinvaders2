@@ -8,6 +8,7 @@ Owen Ziegler
 Description:
 Utility functions for trace-invaders project that don't belong to any specific module or subsystem.
 */
+//example comment
 #include <utils.hpp>
 #include <config.hpp>
 #include <stdint.h>
@@ -27,8 +28,4 @@ String uint8ToBinary(uint8_t value) {
     binary = binary + "\n";
     functionexample();
     return binary;
-}
-
-int functionexample() {
-    return 0;
 }
