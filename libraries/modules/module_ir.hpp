@@ -14,8 +14,10 @@ IR Sensor Header File. Contains declarations of all IR sensor functions
 
 class IrArray {
   public:
-   IrArray();
-   uint8_t getLineState(); 
+    IrArray();
+    uint8_t getLineState();
+  private:
+    void _doSomething();
 };
 
 #endif

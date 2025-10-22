@@ -30,7 +30,7 @@ static std::unordered_map<std::uint8_t, std::int8_t> __IR_STATES {
     {0b00111, -3},
     {0b10111, -2},
     {0b10011, -1},
-    {0b11011, -0}, //centered
+    {0b11011,  0}, //centered
     {0b11001,  1},
     {0b11101,  2},
     {0b11100,  3},

@@ -36,3 +36,8 @@ uint8_t IrArray::getLineState() {
   lineState |= (digitalRead(__IR_PIN_4) << 0);
   return lineState;
 }
+
+void IrArray::_doSomething() {
+  //something something
+  return;
+}
