@@ -25,10 +25,5 @@ String uint8ToBinary(uint8_t value) {
         }
     }
     binary = binary + "\n";
-    functionexample();
     return binary;
-}
-
-int functionexample() {
-    return 0;
 }

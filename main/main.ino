@@ -19,7 +19,6 @@ TaskHandle_t controlTaskHandle = NULL;
 
 Driver *driver;
 IrArray *irArray;
-Lcd *lcd;
 Encoder *encoderL;
 Encoder *encoderR;
 Navigation *navigation;
@@ -34,31 +33,30 @@ float encoderPulseCountRight;
 float pidOutputRight;
 
 //we need to tune these
-float Kp = 6;
-float Ki = 2;
-float Kd = 0;
+float Kp = __PID_KP;
+float Ki = __PID_KI;
+float Kd = __PID_KD;
 
 //initialize using "new" in setup()
 QuickPID *pidLeft;
 QuickPID *pidRight;
 
 volatile int i = 0;
-volatile bool phase = 0;
+volatile int phase = 0;
+volatile float baseSpeed = 0;
+volatile bool phaseChanged = false;
 
 //sensor data
 volatile uint8_t irState;
 
 void ARDUINO_ISR_ATTR run() {
-    uint32_t time = micros();
     //collect sensor data
     irState = irArray->getLineState();
     encoderPulseCountLeft = encoderL->getPulseCount();
     encoderPulseCountRight = encoderR->getPulseCount();
-
     //act on sensor data
-    if (phase) {
-        navigation->navigate();
-    }
+    navigation->navigate();
+
 
     pidLeft->Compute();
     pidRight->Compute();
@@ -86,11 +84,12 @@ volatile uint32_t lastButtonTime = 0;
 
 void IRAM_ATTR onButton() {
     uint32_t now = millis();
-    if (now - lastButtonTime > 200) {  // basic debounce
+    if (now - lastButtonTime > 500) {  // basic debounce
         lastButtonTime = now;
         portENTER_CRITICAL_ISR(&mux);
-        phase = !phase;
+        navigation->nextState = __NAV_STATE::RUNUP;
         portEXIT_CRITICAL_ISR(&mux);
+        Serial.println("BUTTON PRESSED");
     }
 }
 
@@ -133,9 +132,6 @@ void setup() {
     irArray = new IrArray();
     Serial.println("Initialized successfully.");
 
-    Serial.print("   LCD................");
-    lcd = new Lcd(__I2C_ADDR_LCD, "Trace Invader", "Get ready!");
-    Serial.println("Initialized successfully.");
     
     Serial.print("   Left Encoder.......");
     encoderL = new Encoder(mux, __ENCODER_PIN_L_A);
@@ -184,7 +180,8 @@ void setup() {
     navigation = new Navigation(
         &irState,
         &targetPulseCountLeft,
-        &targetPulseCountRight
+        &targetPulseCountRight,
+        &baseSpeed
     );
     Serial.println("done");
 
@@ -197,8 +194,9 @@ void setup() {
     //set the timer to go every 50 ms (50000 us). auto-repeat=true, auto-repeat number=0 (infinite)
     timerAlarm(timer, __TIMER_PERIOD, __TIMER_AUTORELOAD, __TIMER_RELOAD_COUNT);
     //set target pulse count
-    targetPulseCountLeft = 0.5 * __NAV_BASE_SPEED;
-    targetPulseCountRight = 0.5 * __NAV_BASE_SPEED;
+    targetPulseCountLeft = 0;
+    targetPulseCountRight = 0;
+    baseSpeed = __NAV_BASE_PULSECOUNT_HIGH;
 }
 
 

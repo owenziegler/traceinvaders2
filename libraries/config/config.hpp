@@ -71,31 +71,35 @@ constexpr std::uint8_t __ENCODER_PIN_L_A = 5;
 constexpr std::uint8_t __ENCODER_PIN_L_B = 19;
 constexpr std::uint8_t __ENCODER_PIN_R_A = 18;
 constexpr std::uint8_t __ENCODER_PIN_R_B = 3;
-constexpr float __ENCODER_RPM_NUMERATOR = 60000;
-constexpr float __ENCODER_RPM_DENOMINATOR = 280;
+constexpr float __ENCODER_RPM_NUMERATOR = 280;
+constexpr float __ENCODER_RPM_DENOMINATOR = 60000;
 
 // Timers & Interrupts
 constexpr std::uint32_t __TIMER_HZ = 1000000; // 1 MHz clock
 constexpr bool __TIMER_AUTORELOAD = true;
 constexpr std::uint32_t __TIMER_RELOAD_COUNT = 0; //infinite reloads
-constexpr std::uint32_t __TIMER_PERIOD = 50000; // 100 ms (100000 us)
+constexpr std::uint32_t __TIMER_PERIOD = 5000; // 100 ms (100000 us)
 
 //PID constants
-constexpr std::uint8_t __PID_KP = 6;
-constexpr std::uint8_t __PID_KI = 10;
-constexpr std::uint8_t __PID_KD = 2;
+constexpr float __PID_KP = 12;
+constexpr float __PID_KI = 0;
+constexpr float __PID_KD = 0;
 
 // Navigation and State Machine
-constexpr std::uint8_t __NAV_BASE_SPEED = 40; //pulses/timer period
+constexpr std::uint32_t __NAV_BASE_RPM_LOW = 475; //RPM
+constexpr std::uint32_t __NAV_BASE_RPM_HIGH = 500; //RPM
+constexpr float __NAV_BASE_PULSECOUNT_LOW = (__NAV_BASE_RPM_LOW * __ENCODER_RPM_NUMERATOR * (__TIMER_PERIOD / 1000)) / __ENCODER_RPM_DENOMINATOR;
+constexpr float __NAV_BASE_PULSECOUNT_HIGH = (__NAV_BASE_RPM_HIGH * __ENCODER_RPM_NUMERATOR * (__TIMER_PERIOD / 1000)) / __ENCODER_RPM_DENOMINATOR;
 constexpr std::uint8_t __NAV_CURVE = 0;
 constexpr std::uint8_t __NAV_SPEEDUP = 0;
 
 enum class __NAV_STATE {
     RESET = 0,
     RUNUP = 1,
-    LAP = 2,
-    FINISH = 3,
-    LOST = 4
+    COUNTDOWN = 2,
+    LAP = 3,
+    FINISH = 4,
+    LOST = 5
 };
 
 #endif
