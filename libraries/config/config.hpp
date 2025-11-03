@@ -81,13 +81,13 @@ constexpr std::uint32_t __TIMER_RELOAD_COUNT = 0; //infinite reloads
 constexpr std::uint32_t __TIMER_PERIOD = 5000; // 100 ms (100000 us)
 
 //PID constants
-constexpr float __PID_KP = 12;
-constexpr float __PID_KI = 0;
+constexpr float __PID_KP = 50;
+constexpr float __PID_KI = 5;
 constexpr float __PID_KD = 0;
 
 // Navigation and State Machine
-constexpr std::uint32_t __NAV_BASE_RPM_LOW = 475; //RPM
-constexpr std::uint32_t __NAV_BASE_RPM_HIGH = 500; //RPM
+constexpr std::uint32_t __NAV_BASE_RPM_LOW = 300; //RPM
+constexpr std::uint32_t __NAV_BASE_RPM_HIGH = 325; //RPM
 constexpr float __NAV_BASE_PULSECOUNT_LOW = (__NAV_BASE_RPM_LOW * __ENCODER_RPM_NUMERATOR * (__TIMER_PERIOD / 1000)) / __ENCODER_RPM_DENOMINATOR;
 constexpr float __NAV_BASE_PULSECOUNT_HIGH = (__NAV_BASE_RPM_HIGH * __ENCODER_RPM_NUMERATOR * (__TIMER_PERIOD / 1000)) / __ENCODER_RPM_DENOMINATOR;
 constexpr std::uint8_t __NAV_CURVE = 0;

@@ -142,8 +142,12 @@ void Navigation::_followLine() {
     //float outputR = (-1.0 / 64.0) * (float)irState * (float)irState - (1.0 / 8.0) * (float)irState + 0.75;
 
     //improved second degree polynomial
-    float outputL = (-1.0 / 24.0) * pow((float)irState - 1, 2) + 1;
-    float outputR = (-1.0 / 24.0) * pow((float)irState + 1, 2) + 1;
+    float outputL = (-1.0 / 24.0) * pow((float)irState - 2, 2) + 1;
+    float outputR = (-1.0 / 24.0) * pow((float)irState + 2, 2) + 1;
+
+    //third degree polynomial
+    //float outputL = ( 27.0 / 2000.0) * pow((float)irState, 3) - (272.0 / 5000.0) * pow((float)irState, 2) + 1;
+    //float outputR = (-27.0 / 2000.0) * pow((float)irState, 3) - (353.0 / 5000.0) * pow((float)irState, 2) + 1;
 
     *_targetPulseCountLeft = outputL * (*_baseSpeed);
     *_targetPulseCountRight = outputR * (*_baseSpeed);
@@ -152,7 +156,7 @@ void Navigation::_followLine() {
 bool Navigation::_checkTick() {
     if(*_irState == 0b00011000 || *_irState == 0b00010000) {
         _finishCounter++;
-        if(_finishCounter == 8) {
+        if(_finishCounter == 5) {
             return true;
             _finishCounter == 0;
         }
