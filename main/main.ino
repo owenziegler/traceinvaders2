@@ -57,14 +57,24 @@ void ARDUINO_ISR_ATTR run() {
     //act on sensor data
     navigation->navigate();
 
+    if(targetPulseCountLeft >= 0 || targetPulseCountRight >= 0) {
+        driver->setForward();
+    } else {
+        driver->setBackward();
+        targetPulseCountLeft = -targetPulseCountLeft;
+        targetPulseCountRight = -targetPulseCountRight;
+    }
 
     pidLeft->Compute();
     pidRight->Compute();
 
     encoderL->resetPulseCount();
     encoderR->resetPulseCount();
-
-    driver->drive((int)pidOutputLeft, (int)pidOutputRight);
+    if(navigation->stop) {
+        driver->drive(0,0);
+    } else {
+        driver->drive((uint8_t)pidOutputLeft, (uint8_t)pidOutputRight);
+    }
     //lcd->display(String((int)pidOutputLeft), String((int)pidOutputRight));
 }
 
@@ -87,9 +97,8 @@ void IRAM_ATTR onButton() {
     if (now - lastButtonTime > 500) {  // basic debounce
         lastButtonTime = now;
         portENTER_CRITICAL_ISR(&mux);
-        navigation->nextState = __NAV_STATE::RUNUP;
+        navigation->nextState = __NAV_STATE::COUNTDOWN;
         portEXIT_CRITICAL_ISR(&mux);
-        Serial.println("BUTTON PRESSED");
     }
 }
 

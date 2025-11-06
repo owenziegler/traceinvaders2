@@ -15,7 +15,9 @@ Header file for motor driver code, contains declaration of all motor driver func
 class Motor {
     public:
         Motor(uint8_t in1, uint8_t in2, uint8_t pwm);
-        void drive(int pwm);
+        void drive(uint8_t pwm);
+        void setForward();
+        void setBackward();
     private:
         uint8_t _in1, _in2, _pwm;
 };
@@ -23,7 +25,9 @@ class Motor {
 class Driver {
     public:
         Driver();
-        void drive(int pwmL, int pwmR);
+        void drive(uint8_t pwmL, uint8_t pwmR);
+        void setForward();
+        void setBackward();
     private:
         Motor _left;
         Motor _right;
