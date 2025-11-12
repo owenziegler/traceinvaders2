@@ -1,5 +1,5 @@
-#ifndef MODULE_NAVIGATION_HPP
-#define MODULE_NAVIGATION_HPP
+#ifndef MODULE_NAVIGATION_TEST_HPP
+#define MODULE_NAVIGATION_TEST_HPP
 
 #include <cstdint>
 #include <config.hpp>
@@ -12,6 +12,8 @@ class Navigation {
         Config::Navigation::States state;
         Config::Navigation::States nextState;
         bool stop;
+        unsigned long timesum;
+        unsigned long count;
     private:
         volatile uint8_t* _irState;
         float* _targetPulseCountLeft;

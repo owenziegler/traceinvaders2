@@ -38,15 +38,10 @@ void Motor::setBackward() {
 }
 
 Driver::Driver() 
-  : _left(__DRIVER_PIN_LIN1, __DRIVER_PIN_LIN2, __DRIVER_PIN_PWML),
-    _right(__DRIVER_PIN_RIN1, __DRIVER_PIN_RIN2, __DRIVER_PIN_PWMR) {
-  Serial.print("Setting standby pin mode... ");
-  pinMode(__DRIVER_PIN_STBY, OUTPUT);
-  Serial.println("Set successfully");
-  Serial.print("Setting standby pin to HIGH... ");
-  digitalWrite(__DRIVER_PIN_STBY, HIGH);
-  Serial.println("Set successfully");
-
+  : _left(Config::Driver::Pins::LIN1, Config::Driver::Pins::LIN2, Config::Driver::Pins::PWML),
+    _right(Config::Driver::Pins::RIN1, Config::Driver::Pins::RIN2, Config::Driver::Pins::PWMR) {
+  pinMode(Config::Driver::Pins::STBY, OUTPUT);
+  digitalWrite(Config::Driver::Pins::STBY, HIGH);
 }
 
 void Driver::drive(uint8_t pwmL, uint8_t pwmR) {

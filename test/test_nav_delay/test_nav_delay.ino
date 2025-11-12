@@ -10,7 +10,8 @@
 #include <module_driver.hpp>
 #include <module_timer.hpp>
 #include <module_encoder.hpp>
-#include <module_navigation.hpp>
+//#include <module_navigation.hpp>
+#include "module_navigation_test.hpp"
 
 hw_timer_t* timer = NULL;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
@@ -50,15 +51,15 @@ volatile bool phaseChanged = false;
 volatile uint8_t irState;
 
 void ARDUINO_ISR_ATTR run() {
+    unsigned long time = micros();
+    navigation->count++;
     //collect sensor data
     irState = irArray->getLineState();
     encoderPulseCountLeft = encoderL->getPulseCount();
     encoderPulseCountRight = encoderR->getPulseCount();
-
     //act on sensor data
     navigation->navigate();
 
-    //direction check
     if(targetPulseCountLeft >= 0 || targetPulseCountRight >= 0) {
         driver->setForward();
     } else {
@@ -67,28 +68,28 @@ void ARDUINO_ISR_ATTR run() {
         targetPulseCountRight = -targetPulseCountRight;
     }
 
-    //compute pid
     pidLeft->Compute();
     pidRight->Compute();
 
-    //reset encoder count
     encoderL->resetPulseCount();
     encoderR->resetPulseCount();
-
-    //either stop, or keep going
     if(navigation->stop) {
         driver->drive(0,0);
     } else {
         driver->drive((uint8_t)pidOutputLeft, (uint8_t)pidOutputRight);
     }
+    navigation->timesum += (micros() - time);  
 }
 
 
+//this is from chatgpt, it's been tested to work.
+//every 5ms timer calls onTimer
 void ARDUINO_ISR_ATTR onTimer() {
+  // Signal the task to run
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   xSemaphoreGiveFromISR(timerSemaphore, &xHigherPriorityTaskWoken);
   if (xHigherPriorityTaskWoken) {
-    portYIELD_FROM_ISR();  
+    portYIELD_FROM_ISR();  // Request context switch if needed
   }
 }
 
@@ -96,7 +97,7 @@ volatile uint32_t lastButtonTime = 0;
 
 void IRAM_ATTR onButton() {
     uint32_t now = millis();
-    if (now - lastButtonTime > 500) {  
+    if (now - lastButtonTime > 500) {  // basic debounce
         lastButtonTime = now;
         portENTER_CRITICAL_ISR(&mux);
         navigation->nextState = Config::Navigation::States::Countdown; 
@@ -114,10 +115,14 @@ void controlTask(void * parameter) {
 
 void setup() {
     Serial.begin(115200);
-    //small delay
     delay(500);
-    //RTOS setup
+    Serial.println("Serial connection established.");
+    
+    Serial.print("Initializing semaphore... ");
     timerSemaphore = xSemaphoreCreateBinary();
+    Serial.println("Initialized successfully.");
+
+    Serial.print("Creating RTOS task... ");
     xTaskCreatePinnedToCore(
         controlTask,
         "controlTask",
@@ -127,17 +132,35 @@ void setup() {
         &controlTaskHandle,
         1
     );
-    //Driver setup
+    Serial.println("Created successfully.");
+    
+    Serial.println("Initializing subsystem modules...");
+    Serial.print("   Driver.............");
     driver = new Driver();
-    //IrArray setup
+    //driver->drive(255,255);
+    Serial.println("Initialized successfully.");
+
+    Serial.print("   IR Array...........");
     irArray = new IrArray();
-    //Encoders setup
+    Serial.println("Initialized successfully.");
+
+    
+    Serial.print("   Left Encoder.......");
     encoderL = new Encoder(mux, Config::Encoder::Pins::LeftA);
+    Serial.println("Initialized successfully.");
+
+    Serial.print("   Right Encoder......");
     encoderR = new Encoder(mux, Config::Encoder::Pins::RightA);
-    //Button setup
+    Serial.println("Initialized successfully.");
+    Serial.println("Subsystem modules initialized successfully.");
+
+    Serial.print("Button... ");
     pinMode(Config::Ui::Pins::PinButton, INPUT_PULLUP);
     attachInterrupt(Config::Ui::Pins::PinButton, onButton, FALLING);
-    //Left PID setup
+    Serial.println("Initialized successfully.");
+
+    Serial.println("Setting up PID...");
+    Serial.print("left pid... ");
     pidLeft = new QuickPID(
         &encoderPulseCountLeft,
         &pidOutputLeft,
@@ -149,7 +172,9 @@ void setup() {
     pidLeft->SetOutputLimits(0,255);
     pidLeft->SetAntiWindupMode(QuickPID::iAwMode::iAwCondition);
     pidLeft->SetSampleTimeUs(Config::Timer::Period);
-    //Right PID setup
+    Serial.println("done");
+
+    Serial.print("right pid... ");
     pidRight = new QuickPID(
         &encoderPulseCountRight,
         &pidOutputRight,
@@ -161,19 +186,30 @@ void setup() {
     pidRight->SetOutputLimits(0,255);
     pidRight->SetAntiWindupMode(QuickPID::iAwMode::iAwCondition);
     pidRight->SetSampleTimeUs(Config::Timer::Period);
+    Serial.println("done");
+
+    Serial.print("Inititalizing navigation...");
     navigation = new Navigation(
         &irState,
         &targetPulseCountLeft,
         &targetPulseCountRight,
         &baseSpeed
     );
-    //timer setup
+    Serial.println("done");
+
+    Serial.println("Initializing timer...");
+    //most of these params should be moved to config.hpp
+    //start timer at 1 MHz sample rate
     timer = timerBegin(Config::Timer::Frequency);
+    //attach onTimer to timer when the alarm triggers
     timerAttachInterrupt(timer, &onTimer);
+    //set the timer to go every 50 ms (50000 us). auto-repeat=true, auto-repeat number=0 (infinite)
     timerAlarm(timer, Config::Timer::Period, Config::Timer::AutoReload, Config::Timer::ReloadCount);
+    //set target pulse count
     targetPulseCountLeft = 0;
     targetPulseCountRight = 0;
     baseSpeed = Config::Navigation::BasePulseCount;
+
 }
 
 

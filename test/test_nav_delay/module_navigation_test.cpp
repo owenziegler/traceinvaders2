@@ -1,11 +1,14 @@
 #include <Arduino.h>
 #include <cstdint>
 #include <config.hpp>
-#include <module_navigation.hpp>
+//#include <module_navigation.hpp>
+#include "module_navigation_test.hpp"
 #include <module_lcd.hpp>
 
 Navigation::Navigation(volatile uint8_t* irState, float* targetPulseCountLeft, float* targetPulseCountRight, volatile float* baseSpeed) {
     stop = false;
+    timesum = 0;
+    count = 0;
     _irState = irState;
     _targetPulseCountLeft = targetPulseCountLeft;
     _targetPulseCountRight = targetPulseCountRight;
@@ -44,6 +47,7 @@ void Navigation::navigate() {
     }
 }
 
+
 void Navigation::_handleReset() {
     *_targetPulseCountRight = 0;
     *_targetPulseCountLeft = 0;
@@ -57,8 +61,6 @@ void Navigation::_handleCountdown() {
         _lcd->display("Running", "");
         _timer = millis();
         _countdown = 0;
-        *_targetPulseCountRight = 0.5 * *_baseSpeed;
-        *_targetPulseCountLeft = 0.5 * *_baseSpeed;
     }
     else {
         switch(_countdown) {
@@ -85,7 +87,7 @@ void Navigation::_handleCountdown() {
 void Navigation::_handleLap() {
     _followLine();
     _countdown++;
-    if(_countdown <= 250000 / Config::Timer::Period) {
+    if(_countdown <= 5000000 / Config::Timer::Period) {
         _countdown++;
     }
     //display to LCD
@@ -94,12 +96,13 @@ void Navigation::_handleLap() {
             nextState = Config::Navigation::States::Finish;
             stop = true;
             _timer = millis() - _timer;
-            _lcd->display("Time:", String(((float)_timer) / 1000.0));
+            //_lcd->display("Time:", String(((float)_timer) / 1000.0));
+            _lcd->display(String((float)timesum/(float)count), "");
         }
-    }
-    if(_checkLost()) {
-        nextState = Config::Navigation::States::Lost;
-        _lcd->display("LOST", "");
+        else if(_checkLost()) {
+            nextState = Config::Navigation::States::Lost;
+            _lcd->display("LOST", "");
+        }
     }
 }
 
@@ -122,7 +125,7 @@ void Navigation::_handleLost() {
 
     if(_lostCounter == 20) {
         _lcd->display("Running", "");
-        nextState = Config::Navigation::States::Lap;
+        nextState = Config::Navigation::States::Lap
         _lostCounter = 0;
     }
 }
@@ -158,12 +161,13 @@ void Navigation::_followLine() {
 
     *_targetPulseCountLeft = outputL * (*_baseSpeed);
     *_targetPulseCountRight = outputR * (*_baseSpeed);
+
 }
 
 bool Navigation::_checkTick() {
     if(*_irState == Config::Ir::SpecialStates::RightTick1 || *_irState == Config::Ir::SpecialStates::RightTick2) {
         _finishCounter++;
-        if(_finishCounter == 4) {
+        if(_finishCounter == 5) {
             _finishCounter = 0;
             return true;
         }

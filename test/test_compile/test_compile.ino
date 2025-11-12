@@ -19,9 +19,9 @@ void setup() {
     Serial.begin(115200);
     driver = new Driver();
     irArray = new IrArray();
-    lcd = new Lcd(__I2C_ADDR_LCD, "Trace Invader", "Get ready!");
-    encoderL = new Encoder(mux, __ENCODER_PIN_L_A);
-    encoderR = new Encoder(mux, __ENCODER_PIN_R_A);
+    lcd = new Lcd(Config::Ui::Lcd::Address, "Trace Invader", "Get ready!");
+    encoderL = new Encoder(mux, Config::Encoder::Pins::LeftA);
+    encoderR = new Encoder(mux, Config::Encoder::Pins::RightA);
 }
 
 void loop() {

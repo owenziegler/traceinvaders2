@@ -61,12 +61,12 @@ void setup() {
   Serial.println("Motor driver setup complete.");
   //pinMode(_UI_PIN_BUTTON, INPUT_PULLUP);
   Serial.println("Attempting to set encoder pin mode...");
-  pinMode(__ENCODER_PIN_L_A, INPUT);
-  pinMode(__ENCODER_PIN_R_A, INPUT);
+  pinMode(Config::Encoder::Pins::LeftA, INPUT);
+  pinMode(Config::Encoder::Pins::RightA, INPUT);
   Serial.println("Encoder pin mode set");
   Serial.println("Attaching interrupt to encoder pin...");
-  attachInterrupt(__ENCODER_PIN_L_A, &onPulseL, RISING);
-  attachInterrupt(__ENCODER_PIN_R_A, &onPulseR, RISING);
+  attachInterrupt(Config::Encoder::Pins::LeftA,  &onPulseL, RISING);
+  attachInterrupt(Config::Encoder::Pins::RightA, &onPulseR, RISING);
   Serial.println("Interrupt attached to encoder pin");
   Serial.println("Initializing semaphore");
   timerSemaphore = xSemaphoreCreateBinary();
@@ -97,8 +97,8 @@ void loop() {
     portENTER_CRITICAL(&timerMux);
     isrCount = isrCounter;
     isrTime = lastIsrAt;
-    isrLastPulseCountL = lastPulseCountL * __ENCODER_RPM_NUMERATOR / __ENCODER_RPM_DENOMINATOR;
-    isrLastPulseCountR = lastPulseCountR * __ENCODER_RPM_NUMERATOR / __ENCODER_RPM_DENOMINATOR;
+    isrLastPulseCountL = lastPulseCountL * Config::Encoder::gearRatio;
+    isrLastPulseCountR = lastPulseCountR * Config::Encoder::gearRatio;
 
     portEXIT_CRITICAL(&timerMux);
     // Print it
